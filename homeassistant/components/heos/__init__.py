@@ -12,7 +12,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 import homeassistant.helpers.config_validation as cv
@@ -382,9 +382,15 @@ class GroupManager:
             self._disconnect_player_added = None
 
     @callback
-    def register_media_player(self, player_id: int, entity_id: str) -> None:
+    def register_media_player(self, player_id: int, entity_id: str) -> CALLBACK_TYPE:
         """Register a media player player_id with it's entity_id so it can be resolved later."""
         self.entity_id_map[player_id] = entity_id
+        return lambda: self.unregister_media_player(player_id)
+
+    @callback
+    def unregister_media_player(self, player_id) -> None:
+        """Remove a media player player_id from the entity_id map."""
+        self.entity_id_map.pop(player_id, None)
 
     @property
     def group_membership(self):
