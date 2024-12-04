@@ -22,8 +22,10 @@ from homeassistant.components.backup import (
     LocalBackupAgent,
     backup as local_backup_platform,
 )
+from homeassistant.components.backup.agent import BackupAgentError
 from homeassistant.components.backup.const import DATA_MANAGER
 from homeassistant.components.backup.manager import (
+    BackupManagerError,
     BackupManagerState,
     CoreBackupReaderWriter,
     CreateBackupEvent,
@@ -154,12 +156,15 @@ async def test_async_create_backup_when_backing_up(hass: HomeAssistant) -> None:
     ("parameters", "expected_error"),
     [
         ({"agent_ids": []}, "At least one agent must be selected"),
-        ({"agent_ids": ["non_existing"]}, "Invalid agent selected"),
+        ({"agent_ids": ["non_existing"]}, "Invalid agents selected: ['non_existing']"),
         (
             {"include_addons": ["ssl"], "include_all_addons": True},
             "Cannot include all addons and specify specific addons",
         ),
-        ({"include_homeassistant": False}, "Home Assistant must be included in backup"),
+        (
+            {"include_homeassistant": False},
+            "Home Assistant must be included in backup",
+        ),
     ],
 )
 async def test_create_backup_wrong_parameters(
@@ -439,7 +444,9 @@ async def test_async_initiate_backup_with_agent_error(
     with (
         patch("pathlib.Path.open", mock_open(read_data=b"test")),
         patch.object(
-            remote_agent, "async_upload_backup", side_effect=Exception("Test exception")
+            remote_agent,
+            "async_upload_backup",
+            side_effect=BackupAgentError("Test exception"),
         ),
     ):
         await ws_client.send_json_auto_id(
@@ -477,7 +484,7 @@ async def test_async_initiate_backup_with_agent_error(
     assert result["event"] == {
         "manager_state": BackupManagerState.CREATE_BACKUP,
         "stage": None,
-        "state": CreateBackupState.COMPLETED,
+        "state": CreateBackupState.FAILED,
     }
 
     result = await ws_client.receive_json()
@@ -641,9 +648,7 @@ async def test_not_loading_bad_platforms(
     assert platform_mock.mock_calls == []
 
 
-async def test_exception_platform_pre(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
-) -> None:
+async def test_exception_platform_pre(hass: HomeAssistant) -> None:
     """Test exception in pre step."""
 
     async def _mock_step(hass: HomeAssistant) -> None:
@@ -662,21 +667,18 @@ async def test_exception_platform_pre(
     assert await async_setup_component(hass, DOMAIN, {})
     await hass.async_block_till_done()
 
-    await hass.services.async_call(
-        DOMAIN,
-        "create",
-        blocking=True,
-    )
+    with pytest.raises(BackupManagerError) as err:
+        await hass.services.async_call(
+            DOMAIN,
+            "create",
+            blocking=True,
+        )
 
-    assert "Generating backup failed" in caplog.text
-    assert "Test exception" in caplog.text
+    assert str(err.value) == "Error during pre-backup: Test exception"
 
 
 @pytest.mark.usefixtures("mock_backup_generation")
-async def test_exception_platform_post(
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+async def test_exception_platform_post(hass: HomeAssistant) -> None:
     """Test exception in post step."""
 
     async def _mock_step(hass: HomeAssistant) -> None:
@@ -695,14 +697,14 @@ async def test_exception_platform_post(
     assert await async_setup_component(hass, DOMAIN, {})
     await hass.async_block_till_done()
 
-    await hass.services.async_call(
-        DOMAIN,
-        "create",
-        blocking=True,
-    )
+    with pytest.raises(BackupManagerError) as err:
+        await hass.services.async_call(
+            DOMAIN,
+            "create",
+            blocking=True,
+        )
 
-    assert "Generating backup failed" in caplog.text
-    assert "Test exception" in caplog.text
+    assert str(err.value) == "Error during post-backup: Test exception"
 
 
 @pytest.mark.parametrize(

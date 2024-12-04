@@ -1932,7 +1932,7 @@ async def test_subscribe_event(
     hass_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
-    """Test generating a backup."""
+    """Test subscribe event."""
     await setup_backup_integration(hass, with_hassio=False)
 
     manager = hass.data[DATA_MANAGER]
