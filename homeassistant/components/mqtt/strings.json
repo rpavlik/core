@@ -117,6 +117,87 @@
       "invalid_inclusion": "The client certificate and private key must be configurered together"
     }
   },
+  "config_subentries": {
+    "step": {
+      "add_device": {
+        "title": "Add MQTT subentry",
+        "description": "Enter the device details for the new subentry:",
+        "data": {
+          "name": "[%key:common::config_flow::data::name%]",
+          "configuration_url": "Configuration URL",
+          "sw_version": "Software version",
+          "hw_version": "The hardware version of the device.",
+          "model": "Model",
+          "model_id": "Model ID"
+        },
+        "data_description": {
+          "name": "The name of the manually added MQTT device.",
+          "configuration_url": "A link to the webpage that can manage the configuration of this device. Can be either a `http://`, `https://` or an internal `homeassistant://` URL.",
+          "sw_version": "The software version of the device. E.g. `2025.1.0`.",
+          "hw_version": "The hardware version of the device. E.g. `v1.0 rev a`.",
+          "model": "E.g. `Cleanmaster Pro`.",
+          "model_id": "E.g. `123NK2PRO`."
+        }
+      },
+      "summary_menu": {
+        "title": "MQTT subentry summary",
+        "description": "Items configured for {mqtt_device}: {mqtt_items}. Decide what to do next:",
+        "menu_options": {
+          "add_entity": "Add an entity to {mqtt_device}",
+          "finish": "Save and configure {mqtt_device}"
+        }
+      },
+      "add_entity": {
+        "title": "Add entity to {mqtt_device}",
+        "description": "Configure the entity platform and the common entity parameters",
+        "data": {
+          "platform": "Platform",
+          "object_id": "Object ID",
+          "name": "Entity name",
+          "encoding": "Encoding",
+          "qos": "QoS"
+        },
+        "data_description": {
+          "platform": "The platform of the entity to add.",
+          "object_id": "An ID to be used as base to generate the entity_id.",
+          "name": "The name of the entity to add. Leave empty to set it to `None`.",
+          "encoding": "The encoding of the payloads received. Defaults to `utf-8`. Set to `None` to allow to process `raw` payloads.",
+          "qos": "The QoS value this entity should subscrive with."
+        }
+      },
+      "entity_platform_config": {
+        "title": "Configure {platform} platform for {mqtt_device}",
+        "description": "Please configure details for {object_id}:",
+        "data": {
+          "command_topic": "Command topic",
+          "command_template": "Command template",
+          "icon": "Icon",
+          "entity_picture": "Entity picture",
+          "entity_category": "Entity category",
+          "retain": "Retain"
+        },
+        "data_description": {
+          "command_topic": "The publishing topic that will be used to control the {platform} entity.",
+          "command_template": "A template to render the payload to be published at the command topic.",
+          "icon": "The icon assigned to the entity `{object_id}`.",
+          "entity_picture": "An URL to a picture to be assigned `{object_id}`.",
+          "entity_category": "The entity category for `{object_id}`.",
+          "retain": "Select if values published by `{object_id}` should be retained at the MQTT broker."
+        }
+      },
+      "finish": {
+        "title": "Create MQTT subentry {mqtt_device}",
+        "description": "Submit to {mqtt_device} with items: {mqtt_items}"
+      }
+    },
+    "error": {
+      "invalid_input": "Invalid value",
+      "invalid_subscribe_topic": "Invalid subscribe topic",
+      "invalid_template": "Invalid template",
+      "invalid_url": "Invaild URL",
+      "object_id_not_unique": "This Object ID is already used for this device"
+    }
+  },
   "device_automation": {
     "trigger_type": {
       "button_short_press": "\"{subtype}\" pressed",
@@ -230,6 +311,17 @@
     }
   },
   "selector": {
+    "entity_category": {
+      "options": {
+        "diagnostic": "Diagnostic",
+        "config": "Configuration"
+      }
+    },
+    "platform": {
+      "options": {
+        "notify": "Notify"
+      }
+    },
     "set_ca_cert": {
       "options": {
         "off": "[%key:common::state::off%]",
