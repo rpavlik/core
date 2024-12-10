@@ -68,6 +68,8 @@ def generate_and_validate(integrations: dict[str, Integration], config: Config) 
         if integration.integration_type == "virtual":
             continue
 
+        if "codeowners" not in integration.manifest:
+            print(f"Integration {domain} is missing codeowners: {integration}")
         codeowners = integration.manifest["codeowners"]
 
         if not codeowners:
