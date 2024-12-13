@@ -195,7 +195,7 @@
       "invalid_input": "Invalid value",
       "invalid_subscribe_topic": "Invalid subscribe topic",
       "invalid_template": "Invalid template",
-      "invalid_url": "Invaild URL",
+      "invalid_url": "Invalid URL",
       "object_id_not_unique": "This Object ID is already used for this device"
     }
   },

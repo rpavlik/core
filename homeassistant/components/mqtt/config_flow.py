@@ -267,6 +267,23 @@ def update_password_from_user_input(
     return substituted_used_data
 
 
+@callback
+def validate_field(
+    field: str,
+    validator: Callable[..., Any],
+    user_input: dict[str, Any] | None,
+    errors: dict[str, str],
+    error: str,
+) -> None:
+    """Validate a single field."""
+    if user_input is None or field not in user_input:
+        return
+    try:
+        validator(user_input[field])
+    except (ValueError, vol.Invalid):
+        errors[field] = error
+
+
 class FlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle a config flow."""
 
@@ -850,12 +867,12 @@ class MQTTSubentryFlowHandler(ConfigSubentryFlow):
     ) -> SubentryFlowResult:
         """Add a new MQTT device."""
         errors: dict[str, str] = {}
-        if user_input is not None:
-            if not errors:
-                self._subentry_data = MqttSubentryData(
-                    device=cast(MqttDeviceData, user_input), components={}
-                )
-                return await self.async_step_add_entity()
+        validate_field("configuration_url", cv.url, user_input, errors, "invalid_url")
+        if not errors and user_input is not None:
+            self._subentry_data = MqttSubentryData(
+                device=cast(MqttDeviceData, user_input), components={}
+            )
+            return await self.async_step_add_entity()
 
         data_schema = vol.Schema(
             {
@@ -1004,6 +1021,7 @@ class MQTTSubentryFlowHandler(ConfigSubentryFlow):
                 "mqtt_device": mqtt_device,
                 "mqtt_items": mqtt_items,
             },
+            last_step=True,
         )
 
 

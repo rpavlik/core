@@ -2272,3 +2272,193 @@ async def test_reconfigure_flow_form(
         mqtt.CONF_WS_PATH: "/some_new_path",
     }
     await hass.async_block_till_done(wait_background_tasks=True)
+
+
+async def test_subentry_configflow(
+    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+) -> None:
+    """Test the subentry ConfigFlow."""
+    await mqtt_mock_entry()
+    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+
+    result = await hass.config_entries.subentries.async_init(config_entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "add_device"
+
+    # Test the URL validation
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "name": "Milk notifier",
+            "configuration_url": "http:/badurl.example.com",
+        },
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "add_device"
+    assert result["errors"]["configuration_url"] == "invalid_url"
+
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "name": "Milk notifier",
+            "sw_version": "1.0",
+            "hw_version": "2.1 rev a",
+            "model": "Bottle XL",
+            "model_id": "mn002",
+            "configuration_url": "https://example.com",
+        },
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "add_entity"
+    assert result["errors"] == {}
+
+    # Process entity flow
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "platform": "notify",
+            "object_id": "bla123",
+            "name": "Milkman alert",
+            "encoding": "utf-8",
+            "qos": 0,
+        },
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "entity_platform_config"
+    assert result["errors"] == {}
+    assert result["description_placeholders"] == {
+        "mqtt_device": "`Milk notifier`",
+        "platform": "notify",
+        "object_id": "bla123",
+    }
+
+    # Process entity platform config flow
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "command_topic": "test-topic",
+            "command_template": "{{ value_json.value }}",
+            "icon": "mdi:cow",
+            "entity_picture": "https://example.com",
+            "entity_category": "config",
+            "retain": False,
+        },
+    )
+    assert result["type"] is FlowResultType.MENU
+    assert result["menu_options"] == ["add_entity", "finish"]
+    assert result["step_id"] == "summary_menu"
+    assert result["description_placeholders"] == {
+        "mqtt_device": "`Milk notifier`",
+        "mqtt_items": "`notify_bla123`",
+    }
+
+    # Try to add another entity with the same object_id
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        {"next_step_id": "add_entity"},
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "add_entity"
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "platform": "notify",
+            "object_id": "bla123",
+            "name": "Not going to add me",
+        },
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "add_entity"
+    assert result["errors"] == {"object_id": "object_id_not_unique"}
+
+    # Add second entity with a unique object ID
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "platform": "notify",
+            "object_id": "bla456",
+            "name": "The second notifier",
+            "encoding": "None",
+        },
+    )
+    # Use an invalid topic an test validation
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={"command_topic": "test-topic2#invalid"},
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"]["command_topic"] == "invalid_publish_topic"
+    # Try again with a valid configuration
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={"command_topic": "test-topic2"},
+    )
+    assert result["type"] is FlowResultType.MENU
+    assert result["menu_options"] == ["add_entity", "finish"]
+    assert result["step_id"] == "summary_menu"
+    assert result["description_placeholders"] == {
+        "mqtt_device": "`Milk notifier`",
+        "mqtt_items": "`notify_bla123`, `notify_bla456`",
+    }
+    # Finish the subentry flow
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"next_step_id": "finish"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "finish"
+    assert result["description_placeholders"] == {
+        "mqtt_device": "`Milk notifier`",
+        "mqtt_items": "`notify_bla123`, `notify_bla456`",
+    }
+    assert result["last_step"] is True
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        {},
+    )
+    expected_data = {
+        "device": {
+            "name": "Milk notifier",
+            "sw_version": "1.0",
+            "hw_version": "2.1 rev a",
+            "model": "Bottle XL",
+            "model_id": "mn002",
+            "configuration_url": "https://example.com",
+        },
+        "components": {
+            "notify_bla123": {
+                "platform": "notify",
+                "object_id": "bla123",
+                "name": "Milkman alert",
+                "encoding": "utf-8",
+                "qos": 0,
+                "command_topic": "test-topic",
+                "command_template": "{{ value_json.value }}",
+                "icon": "mdi:cow",
+                "entity_picture": "https://example.com",
+                "entity_category": "config",
+                "retain": False,
+            },
+            "notify_bla456": {
+                "platform": "notify",
+                "object_id": "bla456",
+                "name": "The second notifier",
+                "qos": 0,
+                "encoding": None,
+                "command_topic": "test-topic2",
+            },
+        },
+    }
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"] == expected_data
+
+    subentry_id = next(iter(config_entry.subentries.keys()))
+    assert config_entry.subentries == {
+        subentry_id: config_entries.ConfigSubentry(
+            data=expected_data,
+            subentry_id=subentry_id,
+            title=expected_data["device"]["name"],
+            unique_id=None,
+        )
+    }
+
+    await hass.async_block_till_done()
