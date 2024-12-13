@@ -1,6 +1,8 @@
 """Tests for the RDW integration."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from homeassistant.components.rdw.const import DOMAIN
 from homeassistant.config_entries import ConfigEntryState
@@ -9,10 +11,10 @@ from homeassistant.core import HomeAssistant
 from tests.common import MockConfigEntry
 
 
+@pytest.mark.usefixtures("mock_rdw")
 async def test_load_unload_config_entry(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
-    mock_rdw: AsyncMock,
 ) -> None:
     """Test the RDW configuration entry loading/unloading."""
     mock_config_entry.add_to_hass(hass)
