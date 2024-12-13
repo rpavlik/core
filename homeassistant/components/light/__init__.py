@@ -308,10 +308,14 @@ def preprocess_turn_on_alternatives(
             params[ATTR_RGB_COLOR] = (255, 255, 255)
 
     if (mired := params.pop(ATTR_COLOR_TEMP, None)) is not None:
-        raise HomeAssistantError("Got unexpected 'color_temp' argument in turn_on")
+        kelvin = color_util.color_temperature_mired_to_kelvin(mired)
+        params[ATTR_COLOR_TEMP] = int(mired)
+        params[ATTR_COLOR_TEMP_KELVIN] = int(kelvin)
 
     if (kelvin := params.pop(ATTR_KELVIN, None)) is not None:
-        raise HomeAssistantError("Got unexpected 'kelvin' argument in turn_on")
+        mired = color_util.color_temperature_kelvin_to_mired(kelvin)
+        params[ATTR_COLOR_TEMP] = int(mired)
+        params[ATTR_COLOR_TEMP_KELVIN] = int(kelvin)
 
     if (kelvin := params.pop(ATTR_COLOR_TEMP_KELVIN, None)) is not None:
         mired = color_util.color_temperature_kelvin_to_mired(kelvin)
