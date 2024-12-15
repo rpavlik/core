@@ -2162,7 +2162,7 @@ async def test_setup_with_advanced_settings(
 async def test_change_websockets_transport_to_tcp(
     hass: HomeAssistant, mock_try_connection: MagicMock
 ) -> None:
-    """Test option flow setup with websockets transport settings."""
+    """Test reconfiguration flow changing websockets transport settings."""
     config_entry = MockConfigEntry(domain=mqtt.DOMAIN)
     config_entry.add_to_hass(hass)
     hass.config_entries.async_update_entry(
