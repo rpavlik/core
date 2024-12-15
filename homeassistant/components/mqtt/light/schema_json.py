@@ -474,7 +474,7 @@ class MqttLightJson(MqttEntity, LightEntity, RestoreEntity):
                     self._attr_color_temp = int(values["color_temp"])  # type: ignore[arg-type]
             except KeyError:
                 pass
-            except ValueError:
+            except (TypeError, ValueError):
                 _LOGGER.warning(
                     "Invalid color temp value '%s' received for entity %s",
                     values["color_temp"],

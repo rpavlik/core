@@ -2181,7 +2181,9 @@ async def test_white_scale(
     ],
 )
 async def test_invalid_values(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that invalid color/brightness/etc. values are ignored."""
     await mqtt_mock_entry()
@@ -2282,6 +2284,10 @@ async def test_invalid_values(
     # Bad color temperature
     async_fire_mqtt_message(
         hass, "test_light_rgb", '{"state":"ON", "color_temp": "badValue"}'
+    )
+    assert (
+        "Invalid color temp value 'badValue' received for entity light.test"
+        in caplog.text
     )
 
     # Color temperature should not have changed
